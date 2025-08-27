@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  postgres:
+    image: debezium/postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=mydb
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+
+  debezium-server:
+    image: debezium/server:2.2
+    links:
+      - postgres
+      - rabbitmq
+    volumes:
+      - ./debezium-server-config/:/debezium/conf/
+
+  express-app:
+    build:
+      context: ./express-app
+    ports:
+      - "3000:3000"
+    links:
+      - rabbitmq
+    volumes:
+      - ./express-app:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm start
